@@ -14,7 +14,7 @@ Sioyek is a PDF viewer with a focus on textbooks and research papers.
 ### Official packages
 There are installers for Windows, macOS and Linux. See [Releases page](https://github.com/ahrm/sioyek/releases).
 
-### Homebew Cask
+### Homebrew Cask
 There is a homebrew cask available here: https://formulae.brew.sh/cask/sioyek. Install by running:
 ```
 brew install --cask sioyek
