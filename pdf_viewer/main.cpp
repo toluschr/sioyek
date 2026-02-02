@@ -261,18 +261,24 @@ std::wstring ALT_RIGHT_CLICK_COMMAND = L"";
 
 std::vector<MainWidget*> windows;
 
-std::wstring strip_uri(std::wstring pdf_file_name) {
+std::wstring strip_uri(std::wstring pdf_file_name, std::optional<int> *out_page) {
+    QString qstring = QString::fromStdWString(pdf_file_name);
+    if (qstring.startsWith('"') && qstring.endsWith('"')) {
+        qstring = qstring.mid(1, qstring.length() - 2);
+    }
 
-	if (pdf_file_name.size() > 1) {
-		if ((pdf_file_name[0] == '"') && (pdf_file_name[pdf_file_name.size() - 1] == '"')) {
-			pdf_file_name = pdf_file_name.substr(1, pdf_file_name.size() - 2);
-		}
-		// support URIs like this: file:///home/user/file.pdf
-		if (QString::fromStdWString(pdf_file_name).startsWith("file://")) {
-			return pdf_file_name.substr(7, pdf_file_name.size() - 7);
-		}
-	}
-	return pdf_file_name;
+    QUrl url = QUrl::fromUserInput(qstring, QString(), QUrl::AssumeLocalFile);
+    if (!url.isLocalFile()) return qstring.toStdWString();
+
+    if (out_page) {
+        QUrlQuery fragment_query{url.fragment()};
+
+        bool ok;
+        int page = fragment_query.queryItemValue("page", QUrl::FullyDecoded).toInt(&ok);
+        if (ok) *out_page = page - 1;
+    }
+
+    return url.path().toStdWString();
 }
 
 QStringList convert_arguments(QStringList input_args){
@@ -294,7 +300,7 @@ QStringList convert_arguments(QStringList input_args){
         }
 
         if (is_path_argument){
-			std::wstring path_wstring = strip_uri(path.toStdWString());
+			std::wstring path_wstring = strip_uri(path.toStdWString(), NULL);
             Path path_object(path_wstring);
             output_args.push_back(QString::fromStdWString(path_object.get_path()));
             input_args.pop_front();
@@ -582,7 +588,7 @@ MainWidget* handle_args(const QStringList& arguments) {
         y_loc = parser->value("yloc").toFloat();
     }
 
-	pdf_file_name = strip_uri(pdf_file_name);
+	pdf_file_name = strip_uri(pdf_file_name, &page);
 
 	if ((pdf_file_name.size() > 0) && (!QFile::exists(QString::fromStdWString(pdf_file_name)))) {
 		return nullptr;
